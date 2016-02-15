@@ -33,6 +33,7 @@ import (
 
 type KafkaOutputConfig struct {
 	// Client Config
+	Cluster                    string `toml:"cluster"`
 	Id                         string
 	Addrs                      []string
 	MetadataRetries            int    `toml:"metadata_retries"`
@@ -248,7 +249,8 @@ func (k *KafkaOutput) Init(config interface{}) (err error) {
 	case "Hash":
 		k.saramaConfig.Producer.Partitioner = sarama.NewHashPartitioner
 		if k.hashVariable = verifyMessageVariable(k.config.HashVariable); k.hashVariable == nil {
-			return fmt.Errorf("invalid hash_variable: %s", k.config.HashVariable)
+			 k.topicVariable = &messageVariable{header: false, name: k.config.TopicVariable}
+			 //return fmt.Errorf("invalid hash_variable: %s", k.config.HashVariable)
 		}
 	default:
 		return fmt.Errorf("invalid partitioner: %s", k.config.Partitioner)
@@ -364,6 +366,9 @@ func (k *KafkaOutput) Run(or pipeline.OutputRunner, h pipeline.PluginHelper) (er
 		if k.hashVariable != nil {
 			key = sarama.StringEncoder(getMessageVariable(pack.Message, k.hashVariable))
 		}
+		
+		//TODO - not recommended
+		message.NewStringField(pack.Message, "cluster", k.config.Cluster)
 
 		msgBytes, err := or.Encode(pack)
 		if err != nil {
